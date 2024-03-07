@@ -6,12 +6,13 @@ const rl = readline.createInterface({
     output: process.stdin,
 });
 
-const address = "127.0.0.1";
-const port = 9000;
+const ADDRESS = "127.0.0.1";
+const PORT = 9000;
+const DEFAULT_PROMPT = "CHAT> ";
 let username = "";
 
 const client = new net.Socket();
-client.connect(port, address, () => {
+client.connect(PORT, ADDRESS, () => {
     client.write(process.argv[2] ?? "Nothing to send");
 });
 
@@ -24,8 +25,8 @@ client.on("close", () => {
     console.log("Connection closed");
 });
 
-rl.question("What's your name? ", (name) => {
-    rl.setPrompt(`${name}>`);
+rl.question(`${DEFAULT_PROMPT}What's your name? `, (name) => {
+    rl.setPrompt(`${name}> `);
     username = name;
     rl.prompt();
 });
@@ -37,6 +38,8 @@ rl.on("line", (message) => {
     client.write(JSON.stringify(messageJSON));
     rl.prompt();
 }).on("close", () => {
+    rl.setPrompt(DEFAULT_PROMPT);
+    rl.prompt();
     console.log("Closing chat");
     process.exit(0);
 });
