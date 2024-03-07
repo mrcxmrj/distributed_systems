@@ -2,10 +2,18 @@
   "name": "chat_app",
   "version": "1.0.0",
   "description": "Homework for first laboratory of Distributed Systems course",
-  "main": "index.js",
+  "main": "build/server.js",
   "scripts": {
+    "start": "tsc && node build/server.js",
+    "client": "tsc && node build/client.js $1",
+    "dev": "tsc-watch --onSuccess \"node build/server.js\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Marcin Zurawel",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^20.11.25",
+    "tsc-watch": "^6.0.4",
+    "typescript": "^5.4.2"
+  }
 }
