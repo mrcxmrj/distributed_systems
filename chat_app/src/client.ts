@@ -13,29 +13,29 @@ let username = "";
 
 const client = new net.Socket();
 client.connect(PORT, ADDRESS, () => {
-    client.write(process.argv[2] ?? "Nothing to send");
+    console.log("Connected to server");
 });
 
 client.on("data", (data) => {
     console.log("Received: " + data);
-    client.destroy(); // kill client after server's response
 });
 
 client.on("close", () => {
     console.log("Connection closed");
 });
 
-rl.question(`${DEFAULT_PROMPT}What's your name? `, (name) => {
+rl.question("What's your name? ", (name) => {
     rl.setPrompt(`${name}> `);
     username = name;
     rl.prompt();
 });
 rl.on("line", (message) => {
-    const messageJSON = {
+    const messageLog: MessageLog = {
         user: username,
+        timestamp: new Date(),
         message: message,
     };
-    client.write(JSON.stringify(messageJSON));
+    client.write(JSON.stringify(messageLog));
     rl.prompt();
 }).on("close", () => {
     rl.setPrompt(DEFAULT_PROMPT);
