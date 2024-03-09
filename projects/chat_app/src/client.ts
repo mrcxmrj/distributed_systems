@@ -55,8 +55,8 @@ const formatMessage = (timestamp: Date, username: string, message: string) =>
     `[${timestamp.toLocaleTimeString()}] ${username}> ${message}`;
 
 function systemMessage(message: string, username: string = CHATBOT_HANDLE) {
-    readline.moveCursor(process.stdout, 0, -1); // up one line
-    readline.clearLine(process.stdout, 1); // from cursor to end
+    readline.moveCursor(process.stdout, 0, -1);
+    readline.clearLine(process.stdout, 1);
     console.log(`\n${formatMessage(new Date(), username, message)}`);
     promptUserMessage();
 }

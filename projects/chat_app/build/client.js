@@ -44,8 +44,8 @@ rl.on("line", (message) => {
 });
 const formatMessage = (timestamp, username, message) => `[${timestamp.toLocaleTimeString()}] ${username}> ${message}`;
 function systemMessage(message, username = CHATBOT_HANDLE) {
-    node_readline_1.default.moveCursor(node_process_1.default.stdout, 0, -1); // up one line
-    node_readline_1.default.clearLine(node_process_1.default.stdout, 1); // from cursor to end
+    node_readline_1.default.moveCursor(node_process_1.default.stdout, 0, -1);
+    node_readline_1.default.clearLine(node_process_1.default.stdout, 1);
     console.log(`\n${formatMessage(new Date(), username, message)}`);
     promptUserMessage();
 }
