@@ -16,6 +16,7 @@ let username = "";
 const client = new net.Socket();
 client.connect(PORT, ADDRESS, () => {
     systemMessage("Connected to the server");
+
     rl.question(
         `${formatMessage(
             new Date(),
@@ -28,6 +29,18 @@ client.connect(PORT, ADDRESS, () => {
             promptUserMessage();
         }
     );
+    rl.on("line", (message) => {
+        const messageLog: MessageLog = {
+            user: username,
+            timestamp: new Date(),
+            message: message,
+        };
+        promptUserMessage();
+        client.write(JSON.stringify(messageLog));
+    }).on("close", () => {
+        systemMessage("Goodbye");
+        process.exit(0);
+    });
 });
 
 client.on("data", (data) => {
@@ -37,19 +50,6 @@ client.on("data", (data) => {
 
 client.on("close", () => {
     systemMessage("Disconnected from the server");
-});
-
-rl.on("line", (message) => {
-    const messageLog: MessageLog = {
-        user: username,
-        timestamp: new Date(),
-        message: message,
-    };
-    promptUserMessage();
-    client.write(JSON.stringify(messageLog));
-}).on("close", () => {
-    systemMessage("Goodbye");
-    process.exit(0);
 });
 
 const formatMessage = (timestamp: Date, username: string, message: string) =>

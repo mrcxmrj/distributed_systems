@@ -22,6 +22,18 @@ client.connect(PORT, ADDRESS, () => {
         username = name;
         promptUserMessage();
     });
+    rl.on("line", (message) => {
+        const messageLog = {
+            user: username,
+            timestamp: new Date(),
+            message: message,
+        };
+        promptUserMessage();
+        client.write(JSON.stringify(messageLog));
+    }).on("close", () => {
+        systemMessage("Goodbye");
+        node_process_1.default.exit(0);
+    });
 });
 client.on("data", (data) => {
     const decodedData = JSON.parse(data.toString());
@@ -29,18 +41,6 @@ client.on("data", (data) => {
 });
 client.on("close", () => {
     systemMessage("Disconnected from the server");
-});
-rl.on("line", (message) => {
-    const messageLog = {
-        user: username,
-        timestamp: new Date(),
-        message: message,
-    };
-    promptUserMessage();
-    client.write(JSON.stringify(messageLog));
-}).on("close", () => {
-    systemMessage("Goodbye");
-    node_process_1.default.exit(0);
 });
 const formatMessage = (timestamp, username, message) => `[${timestamp.toLocaleTimeString()}] ${username}> ${message}`;
 function systemMessage(message, username = CHATBOT_HANDLE) {
