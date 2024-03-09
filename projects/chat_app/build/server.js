@@ -4,16 +4,20 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const net_1 = __importDefault(require("net"));
+const node_dgram_1 = __importDefault(require("node:dgram"));
 const address = "127.0.0.1";
 const port = 9000;
 const connections = new Set();
+const udpConnections = new Set(); // do we even store udp connections?
 const chatLog = []; // this should probably be a queue?
 const server = net_1.default.createServer();
 server.listen(port, address, () => console.log(`Server is listening on port ${port}`));
 server.on("connection", (socket) => {
     socket.on("data", (data) => handleIncomingMessage(data, socket));
-    connections.add(socket);
     socket.on("close", () => connections.delete(socket));
+    connections.add(socket);
+    const udpSocket = node_dgram_1.default.createSocket("udp4");
+    udpSocket.on("message", handleIncomingImage());
 });
 server.on("close", () => console.log("Closing server"));
 function handleIncomingMessage(data, socket) {
