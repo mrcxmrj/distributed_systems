@@ -1,6 +1,7 @@
 import net from "net";
 import process from "node:process";
 import readline from "node:readline";
+import dgram from "node:dgram";
 
 const rl = readline.createInterface({
     input: process.stdin,
