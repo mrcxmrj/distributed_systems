@@ -12,22 +12,23 @@ const rl = node_readline_1.default.createInterface({
 });
 const ADDRESS = "127.0.0.1";
 const PORT = 9000;
-const DEFAULT_PROMPT = "CHAT> ";
+const CHATBOT_HANDLE = "CHAT";
 let username = "";
 const client = new net_1.default.Socket();
 client.connect(PORT, ADDRESS, () => {
-    console.log("Connected to server");
+    systemMessage("Connected to the server");
+    rl.question(`${formatMessage(new Date(), CHATBOT_HANDLE, "What's your name?")}\n${formatMessage(new Date(), "guest", "")}`, (name) => {
+        rl.setPrompt(`${name}> `);
+        username = name;
+        promptUserMessage();
+    });
 });
 client.on("data", (data) => {
-    console.log("Received: " + data);
+    const decodedData = JSON.parse(data.toString());
+    systemMessage(decodedData.message, decodedData.user);
 });
 client.on("close", () => {
-    console.log("Connection closed");
-});
-rl.question("What's your name? ", (name) => {
-    rl.setPrompt(`${name}> `);
-    username = name;
-    rl.prompt();
+    systemMessage("Disconnected from the server");
 });
 rl.on("line", (message) => {
     const messageLog = {
@@ -35,11 +36,20 @@ rl.on("line", (message) => {
         timestamp: new Date(),
         message: message,
     };
+    promptUserMessage();
     client.write(JSON.stringify(messageLog));
-    rl.prompt();
 }).on("close", () => {
-    rl.setPrompt(DEFAULT_PROMPT);
-    rl.prompt();
-    console.log("Closing chat");
+    systemMessage("Goodbye");
     node_process_1.default.exit(0);
 });
+const formatMessage = (timestamp, username, message) => `[${timestamp.toLocaleTimeString()}] ${username}> ${message}`;
+function systemMessage(message, username = CHATBOT_HANDLE) {
+    node_readline_1.default.moveCursor(node_process_1.default.stdout, 0, -1); // up one line
+    node_readline_1.default.clearLine(node_process_1.default.stdout, 1); // from cursor to end
+    console.log(`\n${formatMessage(new Date(), username, message)}`);
+    promptUserMessage();
+}
+function promptUserMessage() {
+    rl.setPrompt(formatMessage(new Date(), username, ""));
+    rl.prompt();
+}

@@ -31,4 +31,8 @@ function handleIncomingMessage(data, socket) {
     const messageLog = JSON.parse(decodedData);
     chatLog.push(messageLog);
     console.log(chatLog);
+    connections.forEach((connection) => {
+        if (connection.remotePort !== socket.remotePort)
+            connection.write(data);
+    });
 }

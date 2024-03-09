@@ -32,4 +32,7 @@ function handleIncomingMessage(data: Buffer, socket: net.Socket) {
     const messageLog: MessageLog = JSON.parse(decodedData);
     chatLog.push(messageLog);
     console.log(chatLog);
+    connections.forEach((connection) => {
+        if (connection.remotePort !== socket.remotePort) connection.write(data);
+    });
 }
