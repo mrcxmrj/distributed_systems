@@ -13,10 +13,31 @@ const PORT = 9000;
 const CHATBOT_HANDLE = "CHAT";
 let username = "";
 
-const client = new net.Socket();
-client.connect(PORT, ADDRESS, () => {
-    systemMessage("Connected to the server");
+const tcpSocket = new net.Socket();
+const udpSocket = dgram.createSocket("udp4");
+tcpSocket.connect(PORT, ADDRESS, () => {
+    setupTcpListeners();
+    udpSocket.connect(PORT, ADDRESS, () => {
+        setupUdpListeners();
+        mainLoop();
+    });
+});
 
+function setupTcpListeners() {
+    tcpSocket.on("data", (data) => {
+        const decodedData: MessageLog = JSON.parse(data.toString());
+        systemMessage(decodedData.message, decodedData.user);
+    });
+
+    tcpSocket.on("close", () => {
+        systemMessage("Disconnected from the server");
+    });
+}
+
+function setupUdpListeners() {}
+
+function mainLoop() {
+    systemMessage("Connected to the server");
     rl.question(
         `${formatMessage(
             new Date(),
@@ -36,21 +57,12 @@ client.connect(PORT, ADDRESS, () => {
             message: message,
         };
         promptUserMessage();
-        client.write(JSON.stringify(messageLog));
+        tcpSocket.write(JSON.stringify(messageLog));
     }).on("close", () => {
         systemMessage("Goodbye");
         process.exit(0);
     });
-});
-
-client.on("data", (data) => {
-    const decodedData: MessageLog = JSON.parse(data.toString());
-    systemMessage(decodedData.message, decodedData.user);
-});
-
-client.on("close", () => {
-    systemMessage("Disconnected from the server");
-});
+}
 
 const formatMessage = (timestamp: Date, username: string, message: string) =>
     `[${timestamp.toLocaleTimeString()}] ${username}> ${message}`;
