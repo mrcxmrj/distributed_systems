@@ -5,28 +5,57 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const net_1 = __importDefault(require("net"));
 const node_dgram_1 = __importDefault(require("node:dgram"));
-const address = "127.0.0.1";
-const port = 9000;
-const connections = new Set();
-const udpConnections = new Set(); // do we even store udp connections?
+const ADDRESS = "127.0.0.1";
+const PORT = 9000;
+const tcpConnections = new Set();
+const udpSockets = new Set();
 const chatLog = []; // this should probably be a queue?
-const server = net_1.default.createServer();
-server.listen(port, address, () => console.log(`Server is listening on port ${port}`));
-server.on("connection", (socket) => {
-    socket.on("data", (data) => handleIncomingMessage(data, socket));
-    socket.on("close", () => connections.delete(socket));
-    connections.add(socket);
+const tcpServer = net_1.default.createServer();
+tcpServer.listen(PORT, ADDRESS, () => {
     const udpSocket = node_dgram_1.default.createSocket("udp4");
-    udpSocket.on("message", handleIncomingImage());
+    udpSocket.bind(PORT);
+    udpSocket.on("message", (message, remoteInfo) => handleUdpMessage(message, remoteInfo, udpSocket));
+    console.log(`Server is listening on port ${PORT}`);
 });
-server.on("close", () => console.log("Closing server"));
-function handleIncomingMessage(data, socket) {
+tcpServer.on("connection", (socket) => {
+    socket.on("data", (data) => handleTcpData(data, socket));
+    socket.on("close", () => tcpConnections.delete(socket));
+    tcpConnections.add(socket);
+});
+tcpServer.on("close", () => console.log("Closing server"));
+function handleTcpData(data, socket) {
     const decodedData = data.toString("utf-8");
     const messageLog = JSON.parse(decodedData);
     chatLog.push(messageLog);
     console.log(chatLog);
-    connections.forEach((connection) => {
+    tcpConnections.forEach((connection) => {
         if (connection.remotePort !== socket.remotePort)
             connection.write(data);
+    });
+}
+function handleUdpMessage(message, remoteInfo, localSocket) {
+    // console.log(
+    //     "TCP: ",
+    //     Array.from(tcpConnections).map(
+    //         (connection) =>
+    //             connection.remoteAddress + ":" + connection.remotePort
+    //     )
+    // );
+    // console.log("UDP: ", remoteInfo);
+    const remoteSocket = {
+        remoteAddress: remoteInfo.address,
+        remotePort: remoteInfo.port,
+    };
+    const decodedMessage = message.toString("utf-8");
+    if (decodedMessage === "HELLO") {
+        udpSockets.add(remoteSocket);
+        return;
+    }
+    const messageLog = JSON.parse(decodedMessage);
+    chatLog.push(messageLog);
+    console.log(chatLog);
+    udpSockets.forEach((socket) => {
+        if (socket !== remoteSocket)
+            localSocket.send(message, socket.remotePort, socket.remoteAddress);
     });
 }
