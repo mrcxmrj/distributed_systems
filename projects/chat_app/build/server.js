@@ -1,44 +1,39 @@
-import net from "net";
-import dgram from "node:dgram";
-
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const net_1 = __importDefault(require("net"));
+const node_dgram_1 = __importDefault(require("node:dgram"));
 const ADDRESS = "127.0.0.1";
 const PORT = 9000;
-const tcpConnections: Set<net.Socket> = new Set();
-const udpSockets: Set<UdpSocket> = new Set();
-const chatLog: ChatLog = []; // this should probably be a queue?
-
-const tcpServer = net.createServer();
+const tcpConnections = new Set();
+const udpSockets = new Set();
+const chatLog = []; // this should probably be a queue?
+const tcpServer = net_1.default.createServer();
 tcpServer.listen(PORT, ADDRESS, () => {
-    const udpSocket = dgram.createSocket("udp4");
+    const udpSocket = node_dgram_1.default.createSocket("udp4");
     udpSocket.bind(PORT);
-    udpSocket.on("message", (message, remoteInfo) =>
-        handleUdpMessage(message, remoteInfo, udpSocket)
-    );
-
+    udpSocket.on("message", (message, remoteInfo) => handleUdpMessage(message, remoteInfo, udpSocket));
     console.log(`Server is listening on port ${PORT}`);
 });
-tcpServer.on("connection", (socket: net.Socket) => {
+tcpServer.on("connection", (socket) => {
     socket.on("data", (data) => handleTcpData(data, socket));
     socket.on("close", () => tcpConnections.delete(socket));
     tcpConnections.add(socket);
 });
 tcpServer.on("close", () => console.log("Closing server"));
-
-function handleTcpData(data: Buffer, socket: net.Socket) {
+function handleTcpData(data, socket) {
     const decodedData = data.toString("utf-8");
-    const messageLog: MessageLog = JSON.parse(decodedData);
+    const messageLog = JSON.parse(decodedData);
     chatLog.push(messageLog);
     console.log(chatLog);
     tcpConnections.forEach((connection) => {
-        if (connection.remotePort !== socket.remotePort) connection.write(data);
+        if (connection.remotePort !== socket.remotePort)
+            connection.write(data);
     });
 }
-
-function handleUdpMessage(
-    message: Buffer,
-    remoteInfo: dgram.RemoteInfo,
-    localSocket: dgram.Socket
-) {
+function handleUdpMessage(message, remoteInfo, localSocket) {
     // console.log(
     //     "TCP: ",
     //     Array.from(tcpConnections).map(
@@ -47,7 +42,7 @@ function handleUdpMessage(
     //     )
     // );
     // console.log("UDP: ", remoteInfo);
-    const remoteSocket: UdpSocket = {
+    const remoteSocket = {
         remoteAddress: remoteInfo.address,
         remotePort: remoteInfo.port,
     };
@@ -56,11 +51,9 @@ function handleUdpMessage(
         udpSockets.add(remoteSocket);
         return;
     }
-
-    const messageLog: MessageLog = JSON.parse(decodedMessage);
+    const messageLog = JSON.parse(decodedMessage);
     chatLog.push(messageLog);
     console.log(chatLog);
-
     udpSockets.forEach((socket) => {
         if (socket !== remoteSocket)
             localSocket.send(message, socket.remotePort, socket.remoteAddress);
