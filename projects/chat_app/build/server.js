@@ -34,14 +34,6 @@ function handleTcpData(data, socket) {
     });
 }
 function handleUdpMessage(message, remoteInfo, localSocket) {
-    // console.log(
-    //     "TCP: ",
-    //     Array.from(tcpConnections).map(
-    //         (connection) =>
-    //             connection.remoteAddress + ":" + connection.remotePort
-    //     )
-    // );
-    // console.log("UDP: ", remoteInfo);
     const remoteSocket = {
         remoteAddress: remoteInfo.address,
         remotePort: remoteInfo.port,
@@ -55,7 +47,7 @@ function handleUdpMessage(message, remoteInfo, localSocket) {
     chatLog.push(messageLog);
     console.log(chatLog);
     udpSockets.forEach((socket) => {
-        if (socket !== remoteSocket)
+        if (JSON.stringify(socket) !== JSON.stringify(remoteSocket))
             localSocket.send(message, socket.remotePort, socket.remoteAddress);
     });
 }

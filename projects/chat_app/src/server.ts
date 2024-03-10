@@ -39,14 +39,6 @@ function handleUdpMessage(
     remoteInfo: dgram.RemoteInfo,
     localSocket: dgram.Socket
 ) {
-    // console.log(
-    //     "TCP: ",
-    //     Array.from(tcpConnections).map(
-    //         (connection) =>
-    //             connection.remoteAddress + ":" + connection.remotePort
-    //     )
-    // );
-    // console.log("UDP: ", remoteInfo);
     const remoteSocket: UdpSocket = {
         remoteAddress: remoteInfo.address,
         remotePort: remoteInfo.port,
@@ -62,7 +54,7 @@ function handleUdpMessage(
     console.log(chatLog);
 
     udpSockets.forEach((socket) => {
-        if (socket !== remoteSocket)
+        if (JSON.stringify(socket) !== JSON.stringify(remoteSocket))
             localSocket.send(message, socket.remotePort, socket.remoteAddress);
     });
 }

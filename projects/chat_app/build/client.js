@@ -35,10 +35,10 @@ const tcpSocket = new net_1.default.Socket();
 const udpSocket = node_dgram_1.default.createSocket("udp4");
 tcpSocket.connect(PORT, ADDRESS, () => {
     setupTcpListeners();
-    systemMessage("Connected the texting server");
+    printMessage("Connected the texting server");
     udpSocket.connect(PORT, ADDRESS, () => {
         setupUdpListeners();
-        systemMessage("Connected the image transfer server");
+        printMessage("Connected the image transfer server");
         udpSocket.send("HELLO");
         mainLoop();
     });
@@ -46,19 +46,19 @@ tcpSocket.connect(PORT, ADDRESS, () => {
 function setupTcpListeners() {
     tcpSocket.on("data", (data) => {
         const decodedData = JSON.parse(data.toString());
-        systemMessage(decodedData.message, decodedData.user);
+        printMessage(decodedData.message, decodedData.user);
     });
     tcpSocket.on("close", () => {
-        systemMessage("Disconnected from the texting server");
+        printMessage("Disconnected from the texting server");
     });
 }
 function setupUdpListeners() {
     udpSocket.on("message", (message) => {
         const decodedMessage = JSON.parse(message.toString());
-        systemMessage(decodedMessage.message, decodedMessage.user);
+        printMessage(decodedMessage.message, decodedMessage.user);
     });
     tcpSocket.on("close", () => {
-        systemMessage("Disconnected from the image transfer server");
+        printMessage("Disconnected from the image transfer server");
     });
 }
 function mainLoop() {
@@ -75,25 +75,28 @@ function mainLoop() {
         };
         switch (message) {
             case "U":
+                node_readline_1.default.moveCursor(node_process_1.default.stdout, 0, -1);
+                clearLine();
+                printMessage(monkaS, username);
                 messageLog.message = monkaS;
                 udpSocket.send(JSON.stringify(messageLog));
                 break;
             default:
                 tcpSocket.write(JSON.stringify(messageLog));
+                promptUserMessage();
                 break;
         }
-        promptUserMessage();
     }).on("close", () => {
         node_process_1.default.exit(0);
     });
 }
 const formatMessage = (timestamp, username, message) => `[${timestamp.toLocaleTimeString()}] ${username}> ${message}`;
-function systemMessage(message, username = CHATBOT_HANDLE) {
-    // readline.moveCursor(process.stdout, 0, -1);
-    // readline.clearScreenDown(process.stdout);
-    // readline.clearLine(process.stdout, 0);
+const clearLine = () => {
     node_readline_1.default.clearLine(node_process_1.default.stdout, 0);
     node_readline_1.default.cursorTo(node_process_1.default.stdout, 0);
+};
+function printMessage(message, username = CHATBOT_HANDLE) {
+    clearLine();
     console.log(`${formatMessage(new Date(), username, message)}`);
     promptUserMessage();
 }

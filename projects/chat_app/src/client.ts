@@ -34,11 +34,11 @@ const tcpSocket = new net.Socket();
 const udpSocket = dgram.createSocket("udp4");
 tcpSocket.connect(PORT, ADDRESS, () => {
     setupTcpListeners();
-    systemMessage("Connected the texting server");
+    printMessage("Connected the texting server");
     udpSocket.connect(PORT, ADDRESS, () => {
         setupUdpListeners();
 
-        systemMessage("Connected the image transfer server");
+        printMessage("Connected the image transfer server");
         udpSocket.send("HELLO");
         mainLoop();
     });
@@ -47,22 +47,22 @@ tcpSocket.connect(PORT, ADDRESS, () => {
 function setupTcpListeners() {
     tcpSocket.on("data", (data) => {
         const decodedData: MessageLog = JSON.parse(data.toString());
-        systemMessage(decodedData.message, decodedData.user);
+        printMessage(decodedData.message, decodedData.user);
     });
 
     tcpSocket.on("close", () => {
-        systemMessage("Disconnected from the texting server");
+        printMessage("Disconnected from the texting server");
     });
 }
 
 function setupUdpListeners() {
     udpSocket.on("message", (message) => {
         const decodedMessage: MessageLog = JSON.parse(message.toString());
-        systemMessage(decodedMessage.message, decodedMessage.user);
+        printMessage(decodedMessage.message, decodedMessage.user);
     });
 
     tcpSocket.on("close", () => {
-        systemMessage("Disconnected from the image transfer server");
+        printMessage("Disconnected from the image transfer server");
     });
 }
 
@@ -88,15 +88,17 @@ function mainLoop() {
 
         switch (message) {
             case "U":
+                readline.moveCursor(process.stdout, 0, -1);
+                clearLine();
+                printMessage(monkaS, username);
                 messageLog.message = monkaS;
                 udpSocket.send(JSON.stringify(messageLog));
                 break;
             default:
                 tcpSocket.write(JSON.stringify(messageLog));
+                promptUserMessage();
                 break;
         }
-
-        promptUserMessage();
     }).on("close", () => {
         process.exit(0);
     });
@@ -104,10 +106,13 @@ function mainLoop() {
 
 const formatMessage = (timestamp: Date, username: string, message: string) =>
     `[${timestamp.toLocaleTimeString()}] ${username}> ${message}`;
-
-function systemMessage(message: string, username: string = CHATBOT_HANDLE) {
+const clearLine = () => {
     readline.clearLine(process.stdout, 0);
     readline.cursorTo(process.stdout, 0);
+};
+
+function printMessage(message: string, username: string = CHATBOT_HANDLE) {
+    clearLine();
     console.log(`${formatMessage(new Date(), username, message)}`);
     promptUserMessage();
 }
