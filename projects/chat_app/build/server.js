@@ -4,31 +4,50 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const net_1 = __importDefault(require("net"));
-const address = "127.0.0.1";
-const port = 9000;
-const connections = []; // this should be a set?
+const node_dgram_1 = __importDefault(require("node:dgram"));
+const ADDRESS = "127.0.0.1";
+const PORT = 9000;
+const tcpConnections = new Set();
+const udpSockets = new Set();
 const chatLog = []; // this should probably be a queue?
-const server = net_1.default.createServer();
-server.listen(port, address, () => console.log(`Server is listening on port ${port}`));
-server.on("connection", (socket) => {
-    socket.on("data", (data) => handleIncomingMessage(data, socket));
-    connections.push(socket);
+const tcpServer = net_1.default.createServer();
+tcpServer.listen(PORT, ADDRESS, () => {
+    const udpSocket = node_dgram_1.default.createSocket("udp4");
+    udpSocket.bind(PORT);
+    udpSocket.on("message", (message, remoteInfo) => handleUdpMessage(message, remoteInfo, udpSocket));
+    console.log(`Server is listening on port ${PORT}`);
 });
-server.on("close", () => console.log("Closing server"));
-function handleIncomingMessage(data, socket) {
-    // console.log("--------------------------------------------");
-    // console.log(
-    //     `New connnection from ${socket.remoteAddress}:${socket.remotePort}`
-    // );
-    // const bytesRead = socket.bytesRead;
-    // const bytesWritten = socket.bytesWritten;
-    // console.log(`Bytes read: ${bytesRead}`);
-    // console.log(`Bytes written: ${bytesWritten}`);
-    // console.log(`Message received: ${data}`);
-    // console.log("--------------------------------------------");
-    // socket.write("Server confirmation");
+tcpServer.on("connection", (socket) => {
+    socket.on("data", (data) => handleTcpData(data, socket));
+    socket.on("close", () => tcpConnections.delete(socket));
+    tcpConnections.add(socket);
+});
+tcpServer.on("close", () => console.log("Closing server"));
+function handleTcpData(data, socket) {
     const decodedData = data.toString("utf-8");
     const messageLog = JSON.parse(decodedData);
     chatLog.push(messageLog);
     console.log(chatLog);
+    tcpConnections.forEach((connection) => {
+        if (connection.remotePort !== socket.remotePort)
+            connection.write(data);
+    });
+}
+function handleUdpMessage(message, remoteInfo, localSocket) {
+    const remoteSocket = {
+        remoteAddress: remoteInfo.address,
+        remotePort: remoteInfo.port,
+    };
+    const decodedMessage = message.toString("utf-8");
+    if (decodedMessage === "HELLO") {
+        udpSockets.add(remoteSocket);
+        return;
+    }
+    const messageLog = JSON.parse(decodedMessage);
+    chatLog.push(messageLog);
+    console.log(chatLog);
+    udpSockets.forEach((socket) => {
+        if (JSON.stringify(socket) !== JSON.stringify(remoteSocket))
+            localSocket.send(message, socket.remotePort, socket.remoteAddress);
+    });
 }
