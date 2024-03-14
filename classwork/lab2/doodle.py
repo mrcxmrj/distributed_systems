@@ -7,7 +7,6 @@ class Poll(BaseModel):
     question: str
     options_with_votes: List[Tuple[str, int]]
 
-
 app = FastAPI()
 
 @app.get("/")
