@@ -4,6 +4,7 @@ import { redirectToAuthCodeFlow } from "./utils/redirectToAuthCodeFlow";
 const clientId = "9bef3c4aa58f4cf781386c814edd0cc3";
 const params = new URLSearchParams(window.location.search);
 const code = params.get("code");
+const serverUrl = "http://localhost:8000" // NOTE: this should be removed after changing to server site generation
 
 if (!code) {
   redirectToAuthCodeFlow(clientId);
@@ -11,10 +12,11 @@ if (!code) {
   const accessToken = await getAccessToken(clientId, code);
   const profile = await fetchProfile(accessToken);
   console.log(profile)
+  await sendAccessToken(accessToken)
   populateUI(profile);
 }
 
-async function fetchProfile(token: string): Promise<any> {
+async function fetchProfile(token: string): Promise<UserProfile> {
   const result = await fetch("https://api.spotify.com/v1/me", {
     method: "GET", headers: { Authorization: `Bearer ${token}` }
   });
@@ -22,7 +24,7 @@ async function fetchProfile(token: string): Promise<any> {
   return await result.json();
 }
 
-function populateUI(profile: any) {
+function populateUI(profile: UserProfile) {
   document.getElementById("displayName")!.innerText = profile.display_name;
   if (profile.images[0]) {
     const profileImage = new Image(200, 200);
@@ -36,4 +38,8 @@ function populateUI(profile: any) {
   document.getElementById("url")!.innerText = profile.href;
   document.getElementById("url")!.setAttribute("href", profile.href);
   document.getElementById("imgUrl")!.innerText = profile.images[0]?.url ?? '(no profile image)';
+}
+
+async function sendAccessToken(accessToken: string) {
+  fetch(serverUrl, { headers: { "Access-Token": accessToken } })
 }
