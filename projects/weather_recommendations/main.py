@@ -1,9 +1,10 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Header, responses
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from enum import Enum
 from pydantic import BaseModel 
-from typing import List, Tuple
+from typing import Annotated, List, Tuple
+import requests
 
 class Poll(BaseModel):
     question: str
@@ -11,6 +12,7 @@ class Poll(BaseModel):
 
 app = FastAPI()
 app.mount(path="/static", app=StaticFiles(directory="static"), name="static")
+spotify_access_token = ""
 
 origins = [
     "http://localhost",
@@ -27,6 +29,17 @@ app.add_middleware(
 )
 
 @app.get("/")
-def get_auth(request: Request): 
-    print(request.headers)
+def get_auth(access_token: Annotated[str | None, Header()] = None): 
+    # spotify_access_token = request.headers["Access-Token"]
+    fetch_recommendations(access_token) # TODO: implement asynchronous calls
     return
+
+def fetch_recommendations(access_token):
+    headers = {
+        "Authorization": f"Bearer {access_token}"
+    }
+    payload = {
+        "seed_genres": "heavy-metal"
+    }
+    response = requests.get("https://api.spotify.com/v1/recommendations", headers=headers, params=payload)
+    print(response.text)
