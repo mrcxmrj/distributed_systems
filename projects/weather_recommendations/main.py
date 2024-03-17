@@ -29,7 +29,7 @@ app.add_middleware(
 templates = Jinja2Templates(directory="templates")
 
 @app.get("/weather_recommendations", response_class=HTMLResponse)
-def get_weather_recommendations(request: Request, latitude: str, longitude: str, access_token: Annotated[str | None, Header()] = None):
+def get_weather_recommendations(request: Request, latitude: str, longitude: str, genres: str, access_token: Annotated[str | None, Header()] = None):
     if not access_token: return
 
     # TODO: implement asynchronous calls
@@ -40,20 +40,19 @@ def get_weather_recommendations(request: Request, latitude: str, longitude: str,
     suntime_hours = extract_suntime(suntime_data)
     
     valence, energy = calculate_recommendation_parameters(feelslike_c, precip_mm, suntime_hours)
-    recommendations_data = fetch_recommendations(access_token, valence, energy)
+    recommendations_data = fetch_recommendations(access_token, valence, energy, genres)
     tracks_info = extract_recommendations(recommendations_data)
     return templates.TemplateResponse(request=request, name="weather_recommendations.html", context={"weather_info": (feelslike_c, precip_mm, suntime_hours),"recommendation_info": (valence, energy),"tracks_info": tracks_info})
 
 @app.get("/recommendations")
-def fetch_recommendations(access_token: str, target_valence: float, target_energy: float):
+def fetch_recommendations(access_token: str, target_valence: float, target_energy: float, seed_genres: str):
     headers = {
         "Authorization": f"Bearer {access_token}"
     }
     # TODO: implement more parameters (genres, check market, artists, etc.)
     payload = {
-        "limit": 1,
         "market": "PL",
-        "seed_genres": "heavy-metal",
+        "seed_genres": seed_genres.split(","),
         "target_valence": target_valence,
         "target_energy": target_energy
     }

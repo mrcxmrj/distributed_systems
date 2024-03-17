@@ -18,8 +18,8 @@
     <section id=profile>
       <button id="login" style="background-color: #1DB954;">Log in with Spotify</button>
     </section>
-    <section id="input">
-      <form>
+    <section>
+      <form id="input">
         <fieldset class="grid">
           <label>
             Longitude
@@ -34,13 +34,14 @@
           <label>
             Genres (you can see supported genres <a
               href="https://gist.github.com/drumnation/91a789da6f17f2ee20db8f55382b6653">here</a>)
-            <textarea name="tags" placeholder="Provide comma-separated genres"
+            <textarea name="genres" placeholder="Provide comma-separated genres"
               aria-label="Comma separated genres"></textarea>
           </label>
         </fieldset>
         <input id="submit" type="submit" value="Submit" disabled />
       </form>
     </section>
+    <section id="recommendations"></section>
   </main>
 </body>
 
