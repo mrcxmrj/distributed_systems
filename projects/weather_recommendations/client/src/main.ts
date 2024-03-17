@@ -4,7 +4,6 @@ import { redirectToAuthCodeFlow } from "./utils/redirectToAuthCodeFlow";
 const clientId = "9bef3c4aa58f4cf781386c814edd0cc3";
 const params = new URLSearchParams(window.location.search);
 const code = params.get("code");
-const serverUrl = "http://localhost:8000" // NOTE: this should be removed after changing to server site generation
 
 if (!code) {
   redirectToAuthCodeFlow(clientId);
@@ -41,5 +40,14 @@ function populateUI(profile: UserProfile) {
 }
 
 async function sendAccessToken(accessToken: string) {
+  const params = {
+    latitude: "50.0647",
+    longitude: "19.9450"
+  }
+  // NOTE: this could be achieved using geocoding api from OpenWeather
+  // TODO: getting location from user
+
+  const serverUrl = new URL("http://localhost:8000") // NOTE: this should be removed after changing to server site generation
+  serverUrl.search = new URLSearchParams(params).toString()
   fetch(serverUrl, { headers: { "Access-Token": accessToken } })
 }
