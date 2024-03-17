@@ -5,13 +5,18 @@ const clientId = "9bef3c4aa58f4cf781386c814edd0cc3";
 const params = new URLSearchParams(window.location.search);
 const code = params.get("code");
 
-if (!code) {
-  redirectToAuthCodeFlow(clientId);
-} else {
+getLocation()
+
+document.getElementById("login")!.addEventListener("click", () => redirectToAuthCodeFlow(clientId))
+
+if (code) {
   const accessToken = await getAccessToken(clientId, code);
   const profile = await fetchProfile(accessToken);
   console.log(profile)
-  await sendAccessToken(accessToken)
+
+  const submitBtn = document.getElementById("submit") as HTMLInputElement
+  submitBtn!.addEventListener("click", () => sendAccessToken(accessToken))
+  submitBtn.disabled = false
   populateUI(profile);
 }
 
@@ -24,19 +29,9 @@ async function fetchProfile(token: string): Promise<UserProfile> {
 }
 
 function populateUI(profile: UserProfile) {
-  document.getElementById("displayName")!.innerText = profile.display_name;
-  if (profile.images[0]) {
-    const profileImage = new Image(200, 200);
-    profileImage.src = profile.images[0].url;
-    document.getElementById("avatar")!.appendChild(profileImage);
-  }
-  document.getElementById("id")!.innerText = profile.id;
-  document.getElementById("email")!.innerText = profile.email;
-  document.getElementById("uri")!.innerText = profile.uri;
-  document.getElementById("uri")!.setAttribute("href", profile.external_urls.spotify);
-  document.getElementById("url")!.innerText = profile.href;
-  document.getElementById("url")!.setAttribute("href", profile.href);
-  document.getElementById("imgUrl")!.innerText = profile.images[0]?.url ?? '(no profile image)';
+  const profileInfo = `<span style="color: gray"> Logged in as </span> <span>${profile.display_name}</span>`
+  const profileImage = profile.images[0] ? `<img src="${profile.images[0].url}" style="border-radius: 50%; margin-left: 10px" width="50" height="50"/>` : ""
+  document.getElementById("profile")!.innerHTML = `<h2>${profileInfo}${profileImage}</h2>`
 }
 
 async function sendAccessToken(accessToken: string) {
@@ -50,4 +45,13 @@ async function sendAccessToken(accessToken: string) {
   const serverUrl = new URL("http://localhost:8000") // NOTE: this should be removed after changing to server site generation
   serverUrl.search = new URLSearchParams(params).toString()
   fetch(serverUrl, { headers: { "Access-Token": accessToken } })
+}
+
+function getLocation() {
+  const latitudeBox = document.getElementById("latitude") as HTMLInputElement
+  const longitudeBox = document.getElementById("longitude") as HTMLInputElement
+  navigator.geolocation.getCurrentPosition(position => {
+    latitudeBox.value = position.coords.latitude + "°"
+    longitudeBox.value = position.coords.longitude + "°"
+  });
 }

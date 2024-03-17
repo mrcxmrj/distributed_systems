@@ -1,10 +1,12 @@
 from datetime import datetime
 import os
 from typing import Annotated
+from fastapi.responses import HTMLResponse
 import requests
-from fastapi import FastAPI, Header
+from fastapi import FastAPI, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
 app = FastAPI()
 app.mount(path="/static", app=StaticFiles(directory="static"), name="static")
@@ -24,9 +26,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+templates = Jinja2Templates(directory="templates")
 
-@app.get("/")
-def get_weather_recommendations(latitude: str, longitude: str, access_token: Annotated[str | None, Header()] = None):
+@app.get("/weather_recommendations", response_class=HTMLResponse)
+def get_weather_recommendations(request: Request, latitude: str, longitude: str, access_token: Annotated[str | None, Header()] = None):
     if not access_token: return
 
     # TODO: implement asynchronous calls
@@ -36,11 +39,10 @@ def get_weather_recommendations(latitude: str, longitude: str, access_token: Ann
     suntime_data = fetch_suntime(latitude, longitude)
     suntime_hours = extract_suntime(suntime_data)
     
-    target_valence, target_energy = calculate_recommendation_parameters(feelslike_c, precip_mm, suntime_hours)
-    recommendations_data = fetch_recommendations(access_token, target_valence, target_energy)
-    recommendations = extract_recommendations(recommendations_data)
-    print(recommendations)
-    return
+    valence, energy = calculate_recommendation_parameters(feelslike_c, precip_mm, suntime_hours)
+    recommendations_data = fetch_recommendations(access_token, valence, energy)
+    tracks_info = extract_recommendations(recommendations_data)
+    return templates.TemplateResponse(request=request, name="weather_recommendations.html", context={"weather_info": (feelslike_c, precip_mm, suntime_hours),"recommendation_info": (valence, energy),"tracks_info": tracks_info})
 
 @app.get("/recommendations")
 def fetch_recommendations(access_token: str, target_valence: float, target_energy: float):
@@ -58,11 +60,20 @@ def fetch_recommendations(access_token: str, target_valence: float, target_energ
     response = requests.get("https://api.spotify.com/v1/recommendations", headers=headers, params=payload)
     return response.json()
 def extract_recommendations(data):
-    artists_names = [artist["name"] for artist in data["tracks"][0]["artists"]]
-    images = data["tracks"][0]["album"]["images"]
-    track_name = data["tracks"][0]["name"]
-    spotify_external_url = data["tracks"][0]["external_urls"]["spotify"]
-    return artists_names, images, track_name, spotify_external_url
+    tracks_info = []
+    for track in data["tracks"]:
+        artists_names = [artist["name"] for artist in track["album"]["artists"]]
+        first_image = track["album"]["images"][0]["url"]
+        track_name = track["name"]
+        spotify_external_url = track["external_urls"]["spotify"]
+        
+        tracks_info.append({
+            "artists_names": artists_names,
+            "first_image": first_image,
+            "track_name": track_name,
+            "spotify_external_url": spotify_external_url
+        })
+    return tracks_info
 
 weather_api_url = lambda api_method, latitude, longitude: f"http://api.weatherapi.com/v1/{api_method}?key=e67c5fd1d3fc4375b1e210330241603 &q={latitude},{longitude}&aqi=no"
 
