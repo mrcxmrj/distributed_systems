@@ -26,7 +26,7 @@ app.add_middleware(
 )
 
 @app.get("/")
-def get_auth(latitude: str, longitude: str, access_token: Annotated[str | None, Header()] = None):
+def get_weather_recommendations(latitude: str, longitude: str, access_token: Annotated[str | None, Header()] = None):
     if not access_token: return
 
     # TODO: implement asynchronous calls
@@ -49,6 +49,7 @@ def fetch_recommendations(access_token: str, target_valence: float, target_energ
     }
     # TODO: implement more parameters (genres, check market, artists, etc.)
     payload = {
+        "limit": 1,
         "market": "PL",
         "seed_genres": "heavy-metal",
         "target_valence": target_valence,
@@ -57,7 +58,11 @@ def fetch_recommendations(access_token: str, target_valence: float, target_energ
     response = requests.get("https://api.spotify.com/v1/recommendations", headers=headers, params=payload)
     return response.json()
 def extract_recommendations(data):
-    return data
+    artists_names = [artist["name"] for artist in data["tracks"][0]["artists"]]
+    images = data["tracks"][0]["album"]["images"]
+    track_name = data["tracks"][0]["name"]
+    spotify_external_url = data["tracks"][0]["external_urls"]["spotify"]
+    return artists_names, images, track_name, spotify_external_url
 
 weather_api_url = lambda api_method, latitude, longitude: f"http://api.weatherapi.com/v1/{api_method}?key=e67c5fd1d3fc4375b1e210330241603 &q={latitude},{longitude}&aqi=no"
 
@@ -92,6 +97,7 @@ def calculate_recommendation_parameters(feelslike_c: float, precip_mm: float, su
     suntime_weight = 2
     feelslike_weight = 3
     precip_weight = 4
+
     # NOTE: suntime-energy is kinda scientifically based, rest is totally arbitrary lol
     valence = ( suntime_weight * suntime_standardized + feelslike_weight * feelslike_standardized + precip_weight * precip_standardized ) / (suntime_weight + feelslike_weight + precip_weight)
     energy = suntime_standardized
