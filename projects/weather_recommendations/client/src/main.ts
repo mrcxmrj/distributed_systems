@@ -1,26 +1,30 @@
 import { getAccessToken } from "./utils/getAccessToken";
 import { redirectToAuthCodeFlow } from "./utils/redirectToAuthCodeFlow";
+import { UserProfile } from "./interfaces"
 
 const clientId = "9bef3c4aa58f4cf781386c814edd0cc3";
 const params = new URLSearchParams(window.location.search);
 const code = params.get("code");
 let accessToken = sessionStorage.getItem("access-token")
-getLocation()
 
-document.getElementById("login")!.addEventListener("click", () => redirectToAuthCodeFlow(clientId))
+onLoad()
+async function onLoad() {
+  getLocation()
 
-if (code) {
-  accessToken = await getAccessToken(clientId, code);
-  sessionStorage.setItem("access-token", accessToken)
-}
-if (accessToken) {
-  const profile = await fetchProfile(accessToken);
-  console.log(profile)
+  document.getElementById("login")!.addEventListener("click", () => redirectToAuthCodeFlow(clientId))
+  if (code) {
+    accessToken = await getAccessToken(clientId, code);
+    sessionStorage.setItem("access-token", accessToken)
+  }
+  if (accessToken) {
+    const profile = await fetchProfile(accessToken);
+    console.log(profile)
 
-  const submitBtn = document.getElementById("submit") as HTMLInputElement
-  submitBtn!.addEventListener("click", () => getRecommendations(accessToken))
-  submitBtn.disabled = false
-  populateUI(profile);
+    const submitBtn = document.getElementById("submit") as HTMLInputElement
+    submitBtn!.addEventListener("click", () => getRecommendations(accessToken!))
+    submitBtn.disabled = false
+    populateUI(profile);
+  }
 }
 
 async function fetchProfile(token: string): Promise<UserProfile> {
@@ -49,7 +53,7 @@ async function getRecommendations(accessToken: string) {
   serverUrl.search = new URLSearchParams(params).toString()
   const response = await fetch(serverUrl, { headers: { "Access-Token": accessToken } })
   const responseHTML = await response.text()
-  console.log(responseHTML)
+  console.log("html response: ", responseHTML)
 }
 
 function getLocation() {

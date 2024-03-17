@@ -15,7 +15,7 @@ WEATHER_API_KEY = os.environ.get("WEATHER_API_KEY")
 
 origins = [
     "http://localhost",
-    "http://localhost:8080",
+    "http://localhost:8000",
     "http://localhost:5173",
 ]
 
