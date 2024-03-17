@@ -42,7 +42,17 @@ def get_weather_recommendations(request: Request, latitude: str, longitude: str,
     valence, energy = calculate_recommendation_parameters(feelslike_c, precip_mm, suntime_hours)
     recommendations_data = fetch_recommendations(access_token, valence, energy, genres)
     tracks_info = extract_recommendations(recommendations_data)
-    return templates.TemplateResponse(request=request, name="weather_recommendations.html", context={"weather_info": (feelslike_c, precip_mm, suntime_hours),"recommendation_info": (valence, energy),"tracks_info": tracks_info})
+    
+    weather_info = {
+        'feelslike_c': feelslike_c,
+        'precip_mm': precip_mm,
+        'suntime_hours': suntime_hours
+    }
+    recommendation_info = {
+        'valence': valence,
+        'energy': energy
+    }
+    return templates.TemplateResponse(request=request, name="weather_recommendations.html", context={"weather_info": weather_info,"recommendation_info": recommendation_info,"tracks_info": tracks_info})
 
 @app.get("/recommendations")
 def fetch_recommendations(access_token: str, target_valence: float, target_energy: float, seed_genres: str):
@@ -55,6 +65,7 @@ def fetch_recommendations(access_token: str, target_valence: float, target_energ
         "seed_genres": seed_genres.split(","),
         "target_valence": target_valence,
         "target_energy": target_energy
+
     }
     response = requests.get("https://api.spotify.com/v1/recommendations", headers=headers, params=payload)
     return response.json()
