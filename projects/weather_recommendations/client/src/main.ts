@@ -4,18 +4,21 @@ import { redirectToAuthCodeFlow } from "./utils/redirectToAuthCodeFlow";
 const clientId = "9bef3c4aa58f4cf781386c814edd0cc3";
 const params = new URLSearchParams(window.location.search);
 const code = params.get("code");
-
+let accessToken = sessionStorage.getItem("access-token")
 getLocation()
 
 document.getElementById("login")!.addEventListener("click", () => redirectToAuthCodeFlow(clientId))
 
 if (code) {
-  const accessToken = await getAccessToken(clientId, code);
+  accessToken = await getAccessToken(clientId, code);
+  sessionStorage.setItem("access-token", accessToken)
+}
+if (accessToken) {
   const profile = await fetchProfile(accessToken);
   console.log(profile)
 
   const submitBtn = document.getElementById("submit") as HTMLInputElement
-  submitBtn!.addEventListener("click", () => sendAccessToken(accessToken))
+  submitBtn!.addEventListener("click", () => getRecommendations(accessToken))
   submitBtn.disabled = false
   populateUI(profile);
 }
@@ -34,7 +37,7 @@ function populateUI(profile: UserProfile) {
   document.getElementById("profile")!.innerHTML = `<h2>${profileInfo}${profileImage}</h2>`
 }
 
-async function sendAccessToken(accessToken: string) {
+async function getRecommendations(accessToken: string) {
   const params = {
     latitude: "50.0647",
     longitude: "19.9450"
@@ -42,9 +45,11 @@ async function sendAccessToken(accessToken: string) {
   // NOTE: this could be achieved using geocoding api from OpenWeather
   // TODO: getting location from user
 
-  const serverUrl = new URL("http://localhost:8000") // NOTE: this should be removed after changing to server site generation
+  const serverUrl = new URL("http://localhost:8000/weather_recommendations") // NOTE: this should be removed after changing to server site generation
   serverUrl.search = new URLSearchParams(params).toString()
-  fetch(serverUrl, { headers: { "Access-Token": accessToken } })
+  const response = await fetch(serverUrl, { headers: { "Access-Token": accessToken } })
+  const responseHTML = await response.text()
+  console.log(responseHTML)
 }
 
 function getLocation() {
