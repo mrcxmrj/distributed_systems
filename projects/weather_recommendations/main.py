@@ -44,14 +44,15 @@ def get_weather_recommendations(request: Request, latitude: str, longitude: str,
     tracks_info = extract_recommendations(recommendations_data)
     
     weather_info = {
-        'feelslike_c': feelslike_c,
-        'precip_mm': precip_mm,
-        'suntime_hours': suntime_hours
+        'feelslike_c': round(feelslike_c, 2),
+        'precip_mm': round(precip_mm, 2),
+        'suntime_hours': round(suntime_hours, 2)
     }
     recommendation_info = {
-        'valence': valence,
-        'energy': energy
+        'valence': round(valence, 2),
+        'energy': round(energy, 2)
     }
+
     return templates.TemplateResponse(request=request, name="weather_recommendations.html", context={"weather_info": weather_info,"recommendation_info": recommendation_info,"tracks_info": tracks_info})
 
 @app.get("/recommendations")
