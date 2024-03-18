@@ -1,10 +1,9 @@
 <hgroup>
 	<h2>Here are some tracks matching todays weather</h2>
 	<p>
-		Temperature feels like: {{ weather_info.feelslike_c }}°, precipitation: {{ weather_info.precip_mm }}mm,
-		sun time: {{
-		weather_info.suntime_hours }}h,<br>
-		so I suggest something with valence of {{ recommendation_info.valence }} and energy of {{
+		feels like: {{ weather_info.feelslike_c }}°, precipitation: {{ weather_info.precip_mm }}mm, sun time: {{
+		weather_info.suntime_hours }}h<br>
+		suggested valence: {{ recommendation_info.valence }}, energy: {{
 		recommendation_info.energy }}
 	</p>
 </hgroup>
