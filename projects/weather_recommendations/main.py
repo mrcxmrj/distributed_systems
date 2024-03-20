@@ -16,7 +16,7 @@ SPOTIFY_CLIENT_SECRET = os.environ.get("SPOTIFY_CLIENT_SECRET")
 WEATHER_API_KEY = os.environ.get("WEATHER_API_KEY")
 
 app = FastAPI()
-app.mount(path="/static", app=StaticFiles(directory="static"), name="static")
+# app.mount(path="/static", app=StaticFiles(directory="static"), name="static")
 
 origins = [
     "http://localhost",
