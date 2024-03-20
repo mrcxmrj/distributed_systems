@@ -1,17 +1,22 @@
-from datetime import datetime
 import os
+import requests
+import base64
+from datetime import datetime
 from typing import Annotated
 from fastapi.responses import HTMLResponse
-import requests
 from fastapi import FastAPI, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from dotenv import load_dotenv
+
+load_dotenv()
+SPOTIFY_CLIENT_ID = os.environ.get("SPOTIFY_CLIENT_ID")
+SPOTIFY_CLIENT_SECRET = os.environ.get("SPOTIFY_CLIENT_SECRET")
+WEATHER_API_KEY = os.environ.get("WEATHER_API_KEY")
 
 app = FastAPI()
 app.mount(path="/static", app=StaticFiles(directory="static"), name="static")
-spotify_access_token = ""
-WEATHER_API_KEY = os.environ.get("WEATHER_API_KEY")
 
 origins = [
     "http://localhost",
@@ -124,3 +129,16 @@ def calculate_recommendation_parameters(feelslike_c: float, precip_mm: float, su
     valence = ( suntime_weight * suntime_standardized + feelslike_weight * feelslike_standardized + precip_weight * precip_standardized ) / (suntime_weight + feelslike_weight + precip_weight)
     energy = suntime_standardized
     return valence, energy
+
+@app.get("/spotify-auth")
+def authorize_spotify():
+    auth_string = f"{SPOTIFY_CLIENT_ID}:{SPOTIFY_CLIENT_SECRET}" 
+    print(auth_string)
+    base64_auth_string = base64.b64encode(auth_string.encode()).decode()
+    print(base64_auth_string)
+    response = requests.post("https://accounts.spotify.com/api/token", headers={
+        "Authorization": f"Basic {base64_auth_string}"
+    }, data={
+        "grant_type": "client_credentials"
+    })
+    return response.json()
