@@ -18,7 +18,6 @@ async function onLoad() {
   }
   if (accessToken) {
     const profile = await fetchProfile(accessToken);
-    console.log(profile)
 
     const submitBtn = document.getElementById("submit") as HTMLInputElement
     submitBtn!.addEventListener("click", handleSubmit)
@@ -37,7 +36,6 @@ async function handleSubmit(event: MouseEvent) {
   const latitude = formData.get("latitude")?.slice(0, -1) as string
   const longitude = formData.get("longitude")?.slice(0, -1) as string
   const genres: string[] = (formData.get("genres") as string).split(",").map(entry => entry.trim())
-  console.log(latitude, longitude, genres)
 
   const template = await getRecommendations(accessToken!, latitude, longitude, genres)
   recommendationsSection!.innerHTML = template
@@ -66,7 +64,6 @@ async function getRecommendations(accessToken: string, latitude: string, longitu
   // NOTE: this could be achieved using geocoding api from OpenWeather
 
   const serverUrl = new URL("http://127.0.0.1:8000/api/weather_recommendations") // NOTE: this should be removed after changing to server site generation
-  console.log(serverUrl)
   serverUrl.search = new URLSearchParams(params).toString()
   const response = await fetch(serverUrl, { headers: { "Access-Token": accessToken } })
   return await response.text()
