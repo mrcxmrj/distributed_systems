@@ -4,7 +4,7 @@ import base64
 import asyncio
 from datetime import datetime
 from typing import Annotated
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi import FastAPI, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -17,7 +17,6 @@ SPOTIFY_CLIENT_SECRET = os.environ.get("SPOTIFY_CLIENT_SECRET")
 WEATHER_API_KEY = os.environ.get("WEATHER_API_KEY")
 
 app = FastAPI()
-# app.mount(path="/static", app=StaticFiles(directory="static"), name="static")
 
 origins = [
     "http://localhost",
@@ -34,7 +33,7 @@ app.add_middleware(
 )
 templates = Jinja2Templates(directory="templates")
 
-@app.get("/weather_recommendations", response_class=HTMLResponse)
+@app.get("/api/weather_recommendations", response_class=HTMLResponse)
 async def get_weather_recommendations(request: Request, latitude: str, longitude: str, genres: str, access_token: Annotated[str | None, Header()] = None):
     if not access_token: return
 
@@ -59,7 +58,7 @@ async def get_weather_recommendations(request: Request, latitude: str, longitude
 
     return templates.TemplateResponse(request=request, name="weather_recommendations.html", context={"weather_info": weather_info,"recommendation_info": recommendation_info,"tracks_info": tracks_info})
 
-@app.get("/recommendations")
+@app.get("/api/recommendations")
 async def fetch_recommendations(access_token: str, target_valence: float, target_energy: float, seed_genres: str):
     headers = {
         "Authorization": f"Bearer {access_token}"
@@ -92,7 +91,7 @@ def extract_recommendations(data):
 
 weather_api_url = lambda api_method, latitude, longitude: f"http://api.weatherapi.com/v1/{api_method}?key=e67c5fd1d3fc4375b1e210330241603 &q={latitude},{longitude}&aqi=no"
 
-@app.get("/weather")
+@app.get("/api/weather")
 async def fetch_weather(latitude, longitude):
     response = requests.get(weather_api_url("current.json", latitude, longitude))
     return response.json()
@@ -101,7 +100,7 @@ def extract_weather(data):
     precip_mm = data["current"]["precip_mm"]
     return feelslike_c, precip_mm
 
-@app.get("/suntime")
+@app.get("/api/suntime")
 async def fetch_suntime(latitude, longitude):
     response = requests.get(weather_api_url("astronomy.json", latitude, longitude))
     return response.json()
@@ -129,7 +128,7 @@ def calculate_recommendation_parameters(feelslike_c: float, precip_mm: float, su
     energy = suntime_standardized
     return valence, energy
 
-@app.get("/spotify-auth")
+@app.get("/api/spotify-auth")
 async def authorize_spotify():
     auth_string = f"{SPOTIFY_CLIENT_ID}:{SPOTIFY_CLIENT_SECRET}" 
     base64_auth_string = base64.b64encode(auth_string.encode()).decode()
@@ -139,3 +138,18 @@ async def authorize_spotify():
         "grant_type": "client_credentials"
     })
     return response.json()
+
+@app.get("/callback")
+async def callback(request: Request):
+    # Extracting query parameters
+    params = request.query_params
+    
+    # Constructing new URL without /callback
+    new_path = "/"
+    new_url = f"{request.url.scheme}://{request.url.netloc}{new_path}"
+    
+    if params:
+        new_url += "?" + params.__str__()
+    
+    return RedirectResponse(url=new_url)
+app.mount(path="/", app=StaticFiles(directory="static", html=True), name="static")
