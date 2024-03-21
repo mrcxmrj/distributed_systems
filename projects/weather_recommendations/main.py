@@ -16,12 +16,11 @@ SPOTIFY_CLIENT_SECRET = os.environ.get("SPOTIFY_CLIENT_SECRET")
 WEATHER_API_KEY = os.environ.get("WEATHER_API_KEY")
 
 app = FastAPI()
-app.mount(path="/static", app=StaticFiles(directory="static"), name="static")
+app.mount(path="/static", app=StaticFiles(directory="static", html=True), name="static")
 
 origins = [
     "http://localhost",
     "http://localhost:8000",
-    "http://localhost:5173",
 ]
 
 app.add_middleware(
@@ -31,9 +30,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 templates = Jinja2Templates(directory="templates")
 
-@app.get("/weather_recommendations", response_class=HTMLResponse)
+@app.get("/api/weather_recommendations", response_class=HTMLResponse)
 def get_weather_recommendations(request: Request, latitude: str, longitude: str, genres: str, access_token: Annotated[str | None, Header()] = None):
     if not access_token: return
 
@@ -60,7 +60,7 @@ def get_weather_recommendations(request: Request, latitude: str, longitude: str,
 
     return templates.TemplateResponse(request=request, name="weather_recommendations.html", context={"weather_info": weather_info,"recommendation_info": recommendation_info,"tracks_info": tracks_info})
 
-@app.get("/recommendations")
+@app.get("/api/recommendations")
 def fetch_recommendations(access_token: str, target_valence: float, target_energy: float, seed_genres: str):
     headers = {
         "Authorization": f"Bearer {access_token}"
@@ -93,7 +93,7 @@ def extract_recommendations(data):
 
 weather_api_url = lambda api_method, latitude, longitude: f"http://api.weatherapi.com/v1/{api_method}?key=e67c5fd1d3fc4375b1e210330241603 &q={latitude},{longitude}&aqi=no"
 
-@app.get("/weather")
+@app.get("/api/weather")
 def fetch_weather(latitude, longitude):
     response = requests.get(weather_api_url("current.json", latitude, longitude))
     return response.json()
@@ -102,7 +102,7 @@ def extract_weather(data):
     precip_mm = data["current"]["precip_mm"]
     return feelslike_c, precip_mm
 
-@app.get("/suntime")
+@app.get("/api/suntime")
 def fetch_suntime(latitude, longitude):
     response = requests.get(weather_api_url("astronomy.json", latitude, longitude))
     return response.json()
@@ -142,3 +142,7 @@ def authorize_spotify():
         "grant_type": "client_credentials"
     })
     return response.json()
+
+@app.get("/{rest_of_path:path}")
+async def serve_client(request: Request, rest_of_path: str):
+    return templates.TemplateResponse('index.html', { 'request': request })
