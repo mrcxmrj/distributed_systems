@@ -1,9 +1,10 @@
 import os
 import requests
 import base64
+import asyncio
 from datetime import datetime
 from typing import Annotated
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi import FastAPI, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -16,11 +17,11 @@ SPOTIFY_CLIENT_SECRET = os.environ.get("SPOTIFY_CLIENT_SECRET")
 WEATHER_API_KEY = os.environ.get("WEATHER_API_KEY")
 
 app = FastAPI()
-app.mount(path="/static", app=StaticFiles(directory="static", html=True), name="static")
 
 origins = [
     "http://localhost",
     "http://localhost:8000",
+    "http://localhost:5173",
 ]
 
 app.add_middleware(
@@ -30,22 +31,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 templates = Jinja2Templates(directory="templates")
 
 @app.get("/api/weather_recommendations", response_class=HTMLResponse)
-def get_weather_recommendations(request: Request, latitude: str, longitude: str, genres: str, access_token: Annotated[str | None, Header()] = None):
+async def get_weather_recommendations(request: Request, latitude: str, longitude: str, genres: str, access_token: Annotated[str | None, Header()] = None):
     if not access_token: return
 
-    # TODO: implement asynchronous calls
-    weather_data = fetch_weather(latitude, longitude)
-    feelslike_c, precip_mm = extract_weather(weather_data)
+    weather_data, suntime_data = await (asyncio.gather(fetch_weather(latitude, longitude),fetch_suntime(latitude, longitude)))
 
-    suntime_data = fetch_suntime(latitude, longitude)
+    feelslike_c, precip_mm = extract_weather(weather_data)
     suntime_hours = extract_suntime(suntime_data)
     
     valence, energy = calculate_recommendation_parameters(feelslike_c, precip_mm, suntime_hours)
-    recommendations_data = fetch_recommendations(access_token, valence, energy, genres)
+    recommendations_data = await fetch_recommendations(access_token, valence, energy, genres)
     tracks_info = extract_recommendations(recommendations_data)
     
     weather_info = {
@@ -61,7 +59,7 @@ def get_weather_recommendations(request: Request, latitude: str, longitude: str,
     return templates.TemplateResponse(request=request, name="weather_recommendations.html", context={"weather_info": weather_info,"recommendation_info": recommendation_info,"tracks_info": tracks_info})
 
 @app.get("/api/recommendations")
-def fetch_recommendations(access_token: str, target_valence: float, target_energy: float, seed_genres: str):
+async def fetch_recommendations(access_token: str, target_valence: float, target_energy: float, seed_genres: str):
     headers = {
         "Authorization": f"Bearer {access_token}"
     }
@@ -94,7 +92,7 @@ def extract_recommendations(data):
 weather_api_url = lambda api_method, latitude, longitude: f"http://api.weatherapi.com/v1/{api_method}?key=e67c5fd1d3fc4375b1e210330241603 &q={latitude},{longitude}&aqi=no"
 
 @app.get("/api/weather")
-def fetch_weather(latitude, longitude):
+async def fetch_weather(latitude, longitude):
     response = requests.get(weather_api_url("current.json", latitude, longitude))
     return response.json()
 def extract_weather(data):
@@ -103,7 +101,7 @@ def extract_weather(data):
     return feelslike_c, precip_mm
 
 @app.get("/api/suntime")
-def fetch_suntime(latitude, longitude):
+async def fetch_suntime(latitude, longitude):
     response = requests.get(weather_api_url("astronomy.json", latitude, longitude))
     return response.json()
 def extract_suntime(data):
@@ -130,12 +128,10 @@ def calculate_recommendation_parameters(feelslike_c: float, precip_mm: float, su
     energy = suntime_standardized
     return valence, energy
 
-@app.get("/spotify-auth")
-def authorize_spotify():
+@app.get("/api/spotify-auth")
+async def authorize_spotify():
     auth_string = f"{SPOTIFY_CLIENT_ID}:{SPOTIFY_CLIENT_SECRET}" 
-    print(auth_string)
     base64_auth_string = base64.b64encode(auth_string.encode()).decode()
-    print(base64_auth_string)
     response = requests.post("https://accounts.spotify.com/api/token", headers={
         "Authorization": f"Basic {base64_auth_string}"
     }, data={
@@ -143,6 +139,17 @@ def authorize_spotify():
     })
     return response.json()
 
-@app.get("/{rest_of_path:path}")
-async def serve_client(request: Request, rest_of_path: str):
-    return templates.TemplateResponse('index.html', { 'request': request })
+@app.get("/callback")
+async def callback(request: Request):
+    # Extracting query parameters
+    params = request.query_params
+    
+    # Constructing new URL without /callback
+    new_path = "/"
+    new_url = f"{request.url.scheme}://{request.url.netloc}{new_path}"
+    
+    if params:
+        new_url += "?" + params.__str__()
+    
+    return RedirectResponse(url=new_url)
+app.mount(path="/", app=StaticFiles(directory="static", html=True), name="static")
