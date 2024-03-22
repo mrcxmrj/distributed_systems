@@ -65,7 +65,7 @@ async function getRecommendations(accessToken: string, latitude: string, longitu
     genres: genres.join(",")
   }
   // NOTE: this could be achieved using geocoding api from OpenWeather
-  const serverUrl = new URL(`${baseUrl}/api/weather_recommendations`)
+  const serverUrl = new URL(`${baseUrl}api/weather_recommendations`)
   serverUrl.search = new URLSearchParams(params).toString()
   const response = await fetch(serverUrl, { headers: { "Access-Token": accessToken } })
   return await response.text()
