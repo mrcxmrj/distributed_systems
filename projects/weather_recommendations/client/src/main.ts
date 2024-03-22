@@ -6,8 +6,9 @@ const clientId = "9bef3c4aa58f4cf781386c814edd0cc3";
 const params = new URLSearchParams(window.location.search);
 const code = params.get("code");
 let accessToken = sessionStorage.getItem("access-token")
-let url = window.location.href
-let baseUrl = url.indexOf('?') === -1 ? url : url.slice(0, url.indexOf('?') - 1);
+const url = new URL(window.location.href)
+const baseUrl = url.origin + url.pathname
+// let baseUrl = url.indexOf('?') === -1 ? url : url.slice(0, url.indexOf('?') - 1);
 
 onLoad()
 async function onLoad() {
@@ -64,7 +65,7 @@ async function getRecommendations(accessToken: string, latitude: string, longitu
     genres: genres.join(",")
   }
   // NOTE: this could be achieved using geocoding api from OpenWeather
-  const serverUrl = new URL(`${baseUrl}/api/weather_recommendations`) // NOTE: this should be removed after changing to server site generation
+  const serverUrl = new URL(`${baseUrl}/api/weather_recommendations`)
   serverUrl.search = new URLSearchParams(params).toString()
   const response = await fetch(serverUrl, { headers: { "Access-Token": accessToken } })
   return await response.text()
