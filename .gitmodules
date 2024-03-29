@@ -1,0 +1,3 @@
+[submodule "projects/weather-recommendations"]
+	path = projects/weather-recommendations
+	url = https://github.com/mrcxmrj/weather-recommendations
