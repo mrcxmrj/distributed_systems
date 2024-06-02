@@ -1,4 +1,5 @@
 import * as amqp from "amqplib";
+import { consumeMessage, sendMessage } from "./utils";
 
 const args = process.argv.slice(2);
 
@@ -12,26 +13,30 @@ const [examination_type, examination_content] = args;
   const connection = await amqp.connect("amqp://localhost");
   const channel = await connection.createChannel();
 
-  sendMessage(
+  const correlationId = sendMessage(
     channel,
     "examination_request",
     examination_type,
     examination_content,
   );
 
-  setTimeout(function () {
-    connection.close();
-    process.exit(0);
-  }, 500);
+  const exchange = "examination_request";
+  channel.assertExchange(exchange, "direct", { durable: true });
+
+  const queue = "examination_response";
+  const q = await channel.assertQueue(queue, { exclusive: false });
+
+  console.log(" [*] Waiting for messages in %s. To exit press CTRL+C", q.queue);
+  channel.bindQueue(q.queue, exchange, queue);
+
+  consumeMessage(channel, q, (msg) => {
+    if (msg.properties.correlationId === correlationId)
+      processMessage(channel, msg);
+  });
 })();
 
-function sendMessage(
-  channel: amqp.Channel,
-  exchange: string,
-  routingKey: string,
-  msg: string,
-) {
-  channel.assertExchange(exchange, "direct", { durable: true });
-  channel.publish(exchange, routingKey, Buffer.from(msg), { persistent: true });
-  console.log(" [x] Sent %s", msg);
+function processMessage(channel: amqp.Channel, msg: amqp.ConsumeMessage) {
+  console.log(` [x] Response: '${msg.content.toString()}'`);
+  channel.ack(msg);
+  process.exit(0);
 }

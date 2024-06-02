@@ -1,4 +1,5 @@
 import * as amqp from "amqplib";
+import { consumeMessage, getRandomBoolean, sendMessage } from "./utils";
 
 const proficiencies = process.argv.slice(2);
 
@@ -22,38 +23,20 @@ if (proficiencies.length != 2) {
     );
     channel.bindQueue(q.queue, exchange, proficiency);
 
-    consumeMessage(channel, q, (msg) => processMessage(channel, msg));
+    consumeMessage(channel, q, (msg) => {
+      processMessage(channel, msg);
+      const patientStatus = getRandomBoolean() ? "stable" : "in rough shape";
+      const responseContent = `Results for ${msg.fields.routingKey}/${msg.properties.correlationId}/'${msg.content.toString()}': patient is ${patientStatus}`;
+      sendMessage(
+        channel,
+        exchange,
+        "examination_response",
+        responseContent,
+        msg.properties.correlationId,
+      );
+    });
   });
 })();
-
-function consumeMessage(
-  channel: amqp.Channel,
-  q: amqp.Replies.AssertQueue,
-  callback: (message: amqp.ConsumeMessage) => void,
-) {
-  channel.consume(
-    q.queue,
-    (msg) => {
-      if (msg?.content) {
-        callback(msg);
-      }
-    },
-    {
-      noAck: false,
-    },
-  );
-}
-
-function sendMessage(
-  channel: amqp.Channel,
-  exchange: string,
-  routingKey: string,
-  msg: string,
-) {
-  channel.assertExchange(exchange, "direct", { durable: true });
-  channel.publish(exchange, routingKey, Buffer.from(msg), { persistent: true });
-  console.log(" [x] Sent %s", msg);
-}
 
 function processMessage(channel: amqp.Channel, msg: amqp.ConsumeMessage) {
   console.log(
@@ -62,5 +45,5 @@ function processMessage(channel: amqp.Channel, msg: amqp.ConsumeMessage) {
   setTimeout(() => {
     console.log(" [x] Done");
     channel.ack(msg);
-  }, 1000);
+  }, 3000);
 }
