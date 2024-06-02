@@ -31,12 +31,28 @@ function sendMessage(
     persistent: true,
     correlationId: correlationId,
   });
-  console.log(" [x] Sent %s", msg);
   return correlationId;
 }
 
-function getRandomBoolean() {
-  return Math.random() >= 0.5;
-}
+const getRandomBoolean = () => Math.random() >= 0.5;
+const getRandomSeconds = () => Math.random() * 10000;
+const getRandomName = () => (getRandomBoolean() ? "John" : "Jane");
+const getRandomExamType = () => {
+  const randomNumber = Math.random();
+  if (randomNumber <= 0.33) return "knee";
+  if (randomNumber <= 0.66) return "hip";
+  return "elbow";
+};
 
-export { consumeMessage, sendMessage, getRandomBoolean };
+const log = (username: string, content: string) =>
+  console.log(`[${new Date().toLocaleTimeString()}] ${username}> ${content}`);
+
+export {
+  consumeMessage,
+  sendMessage,
+  getRandomBoolean,
+  getRandomSeconds,
+  getRandomName,
+  getRandomExamType,
+  log,
+};

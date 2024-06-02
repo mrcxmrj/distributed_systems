@@ -1,12 +1,18 @@
 import * as amqp from "amqplib";
-import { consumeMessage, getRandomBoolean, sendMessage } from "./utils";
+import {
+  consumeMessage,
+  getRandomBoolean,
+  getRandomExamType,
+  getRandomSeconds,
+  log,
+  sendMessage,
+} from "./utils";
 
-const proficiencies = process.argv.slice(2);
+const args = process.argv.slice(2);
 
-if (proficiencies.length != 2) {
-  console.log("Usage: technician.js [proficiency_1] [proficiency_2]");
-  process.exit(1);
-}
+const name = args[0] ?? "Dexter";
+const proficiency1 = args[1] ?? getRandomExamType();
+const proficiency2 = args[2] ?? getRandomExamType();
 
 (async () => {
   const connection = await amqp.connect("amqp://localhost");
@@ -14,19 +20,16 @@ if (proficiencies.length != 2) {
 
   const exchange = "examination_request";
   channel.assertExchange(exchange, "direct", { durable: true });
-  proficiencies.forEach(async (proficiency) => {
+  [proficiency1, proficiency2].forEach(async (proficiency) => {
     const q = await channel.assertQueue(proficiency, { exclusive: false });
 
-    console.log(
-      " [*] Waiting for messages in %s. To exit press CTRL+C",
-      q.queue,
-    );
+    log(name, `Waiting for messages in ${q.queue}. To exit press CTRL+C`);
     channel.bindQueue(q.queue, exchange, proficiency);
 
     consumeMessage(channel, q, (msg) => {
       processMessage(channel, msg);
       const patientStatus = getRandomBoolean() ? "stable" : "in rough shape";
-      const responseContent = `Results for ${msg.fields.routingKey}/${msg.properties.correlationId}/'${msg.content.toString()}': patient is ${patientStatus}`;
+      const responseContent = `${getCaseNumber(msg)}: patient is ${patientStatus}`;
       sendMessage(
         channel,
         exchange,
@@ -34,16 +37,18 @@ if (proficiencies.length != 2) {
         responseContent,
         msg.properties.correlationId,
       );
+      log(name, responseContent);
     });
   });
 })();
 
 function processMessage(channel: amqp.Channel, msg: amqp.ConsumeMessage) {
-  console.log(
-    ` [x] Processing ${msg.fields.routingKey}: '${msg.content.toString()}'`,
-  );
+  log(name, `Processing ${getCaseNumber(msg)}`);
   setTimeout(() => {
-    console.log(" [x] Done");
+    log(name, `Done processing ${getCaseNumber(msg)}`);
     channel.ack(msg);
-  }, 3000);
+  }, getRandomSeconds());
 }
+
+const getCaseNumber = (msg: amqp.ConsumeMessage) =>
+  `${msg.properties.correlationId}/${msg.fields.routingKey}/${msg.content.toString()}`;

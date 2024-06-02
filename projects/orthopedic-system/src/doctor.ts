@@ -1,42 +1,61 @@
 import * as amqp from "amqplib";
-import { consumeMessage, sendMessage } from "./utils";
+import {
+  consumeMessage,
+  getRandomExamType,
+  getRandomName,
+  getRandomSeconds,
+  log,
+  sendMessage,
+} from "./utils";
 
 const args = process.argv.slice(2);
-
-if (args.length != 2) {
-  console.log("Usage: doctor.js [examination_type] [examination_content]");
-  process.exit(1);
-}
-const [examination_type, examination_content] = args;
+const name = args[0] ?? "Dr.Who";
 
 (async () => {
   const connection = await amqp.connect("amqp://localhost");
   const channel = await connection.createChannel();
-
-  const correlationId = sendMessage(
-    channel,
-    "examination_request",
-    examination_type,
-    examination_content,
-  );
 
   const exchange = "examination_request";
   channel.assertExchange(exchange, "direct", { durable: true });
 
   const queue = "examination_response";
   const q = await channel.assertQueue(queue, { exclusive: false });
-
-  console.log(" [*] Waiting for messages in %s. To exit press CTRL+C", q.queue);
   channel.bindQueue(q.queue, exchange, queue);
 
+  const correlationIds: Set<string> = new Set();
   consumeMessage(channel, q, (msg) => {
-    if (msg.properties.correlationId === correlationId)
+    if (correlationIds.has(msg.properties.correlationId)) {
       processMessage(channel, msg);
+      correlationIds.delete(msg.properties.correlationId);
+    }
   });
+
+  setInterval(() => {
+    correlationIds.add(
+      requestExamination(channel, getRandomExamType(), getRandomName()),
+    );
+  }, getRandomSeconds());
 })();
 
 function processMessage(channel: amqp.Channel, msg: amqp.ConsumeMessage) {
-  console.log(` [x] Response: '${msg.content.toString()}'`);
+  log(name, `I just got results: ${msg.content.toString()}`);
   channel.ack(msg);
-  process.exit(0);
+}
+
+function requestExamination(
+  channel: amqp.Channel,
+  examination_type: string,
+  examination_content: string,
+) {
+  const correlationId = sendMessage(
+    channel,
+    "examination_request",
+    examination_type,
+    examination_content,
+  );
+  log(
+    name,
+    `I need ${examination_type} examination for ${examination_content}! Case number: ${correlationId}`,
+  );
+  return correlationId;
 }
