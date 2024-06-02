@@ -22,22 +22,45 @@ if (proficiencies.length != 2) {
     );
     channel.bindQueue(q.queue, exchange, proficiency);
 
-    channel.consume(
-      q.queue,
-      (msg) => {
-        if (msg?.content) {
-          console.log(
-            ` [x] Processing ${msg.fields.routingKey}: '${msg.content.toString()}'`,
-          );
-          setTimeout(() => {
-            console.log(" [x] Done");
-            channel.ack(msg);
-          }, 1000);
-        }
-      },
-      {
-        noAck: false,
-      },
-    );
+    consumeMessage(channel, q, (msg) => processMessage(channel, msg));
   });
 })();
+
+function consumeMessage(
+  channel: amqp.Channel,
+  q: amqp.Replies.AssertQueue,
+  callback: (message: amqp.ConsumeMessage) => void,
+) {
+  channel.consume(
+    q.queue,
+    (msg) => {
+      if (msg?.content) {
+        callback(msg);
+      }
+    },
+    {
+      noAck: false,
+    },
+  );
+}
+
+function sendMessage(
+  channel: amqp.Channel,
+  exchange: string,
+  routingKey: string,
+  msg: string,
+) {
+  channel.assertExchange(exchange, "direct", { durable: true });
+  channel.publish(exchange, routingKey, Buffer.from(msg), { persistent: true });
+  console.log(" [x] Sent %s", msg);
+}
+
+function processMessage(channel: amqp.Channel, msg: amqp.ConsumeMessage) {
+  console.log(
+    ` [x] Processing ${msg.fields.routingKey}: '${msg.content.toString()}'`,
+  );
+  setTimeout(() => {
+    console.log(" [x] Done");
+    channel.ack(msg);
+  }, 1000);
+}

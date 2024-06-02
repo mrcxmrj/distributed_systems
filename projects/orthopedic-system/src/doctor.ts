@@ -12,15 +12,26 @@ const [examination_type, examination_content] = args;
   const connection = await amqp.connect("amqp://localhost");
   const channel = await connection.createChannel();
 
-  const exchange = "examination_request";
-  const msg = examination_content;
-  const routingKey = examination_type;
+  sendMessage(
+    channel,
+    "examination_request",
+    examination_type,
+    examination_content,
+  );
 
-  channel.assertExchange(exchange, "direct", { durable: true });
-  channel.publish(exchange, routingKey, Buffer.from(msg), { persistent: true });
-  console.log(" [x] Sent %s", msg);
   setTimeout(function () {
     connection.close();
     process.exit(0);
   }, 500);
 })();
+
+function sendMessage(
+  channel: amqp.Channel,
+  exchange: string,
+  routingKey: string,
+  msg: string,
+) {
+  channel.assertExchange(exchange, "direct", { durable: true });
+  channel.publish(exchange, routingKey, Buffer.from(msg), { persistent: true });
+  console.log(" [x] Sent %s", msg);
+}
