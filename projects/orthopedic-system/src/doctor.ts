@@ -1,4 +1,4 @@
-import * as amqp from "amqplib/callback_api";
+import * as amqp from "amqplib";
 
 const args = process.argv.slice(2);
 
@@ -8,25 +8,19 @@ if (args.length != 2) {
 }
 const [examination_type, examination_content] = args;
 
-amqp.connect("amqp://localhost", (error, connection) => {
-  if (error) {
-    console.error(error);
-  }
-  connection.createChannel((error, channel) => {
-    if (error) {
-      console.error(error);
-    }
+(async () => {
+  const connection = await amqp.connect("amqp://localhost");
+  const channel = await connection.createChannel();
 
-    const exchange = "examination_request";
-    const msg = examination_content;
-    const routingKey = examination_type;
+  const exchange = "examination_request";
+  const msg = examination_content;
+  const routingKey = examination_type;
 
-    channel.assertExchange(exchange, "direct", { durable: false });
-    channel.publish(exchange, routingKey, Buffer.from(msg));
-    console.log(" [x] Sent %s", msg);
-  });
+  channel.assertExchange(exchange, "direct", { durable: false });
+  channel.publish(exchange, routingKey, Buffer.from(msg));
+  console.log(" [x] Sent %s", msg);
   setTimeout(function () {
     connection.close();
     process.exit(0);
   }, 500);
-});
+})();
