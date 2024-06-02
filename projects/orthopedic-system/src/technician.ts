@@ -16,12 +16,10 @@ if (proficiencies.length != 2) {
   proficiencies.forEach(async (proficiency) => {
     const q = await channel.assertQueue(proficiency, { exclusive: false });
 
-    console.log(`asserted ${proficiency}`);
     console.log(
       " [*] Waiting for messages in %s. To exit press CTRL+C",
       q.queue,
     );
-    console.log(`bound ${proficiency}`);
     channel.bindQueue(q.queue, exchange, proficiency);
 
     channel.consume(
