@@ -12,7 +12,7 @@ if (proficiencies.length != 2) {
   const channel = await connection.createChannel();
 
   const exchange = "examination_request";
-  channel.assertExchange(exchange, "direct", { durable: false });
+  channel.assertExchange(exchange, "direct", { durable: true });
   proficiencies.forEach(async (proficiency) => {
     const q = await channel.assertQueue(proficiency, { exclusive: false });
 

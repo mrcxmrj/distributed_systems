@@ -16,8 +16,8 @@ const [examination_type, examination_content] = args;
   const msg = examination_content;
   const routingKey = examination_type;
 
-  channel.assertExchange(exchange, "direct", { durable: false });
-  channel.publish(exchange, routingKey, Buffer.from(msg));
+  channel.assertExchange(exchange, "direct", { durable: true });
+  channel.publish(exchange, routingKey, Buffer.from(msg), { persistent: true });
   console.log(" [x] Sent %s", msg);
   setTimeout(function () {
     connection.close();
