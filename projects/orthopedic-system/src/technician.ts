@@ -27,12 +27,16 @@ if (proficiencies.length != 2) {
       (msg) => {
         if (msg?.content) {
           console.log(
-            ` [x] ${msg.fields.routingKey}: '${msg.content.toString()}'`,
+            ` [x] Processing ${msg.fields.routingKey}: '${msg.content.toString()}'`,
           );
+          setTimeout(() => {
+            console.log(" [x] Done");
+            channel.ack(msg);
+          }, 1000);
         }
       },
       {
-        noAck: true,
+        noAck: false,
       },
     );
   });
