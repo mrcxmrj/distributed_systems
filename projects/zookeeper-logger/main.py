@@ -1,14 +1,28 @@
 from typing import Callable, cast
 
+import os
 from kazoo.client import KazooClient
 from kazoo.exceptions import NoNodeException
 
+class TUI:
+    def render(self) -> None:
+        self.clear()
+        print("TUI")
+
+    def clear(self) -> None:
+        print("TUI stopped")
+        pass
+        # os.system('clear')
 
 class ZooKeeperLogger:
     def __init__(self) -> None:
         self.zk = self.init_kazoo()
+        # self.ui = TUI()
+        # self.watch_znode_presence(
+        #     "/", "a", self.ui.render, self.ui.clear
+        # )
         self.watch_znode_presence(
-            "/", "a", lambda: print("success!"), lambda: print("failure ;/")
+            "/", "a", lambda: self.watch_znode("/a"), lambda: print('node deleted')
         )
         self.main_loop()
 
@@ -17,6 +31,17 @@ class ZooKeeperLogger:
         zk.start()
         print("kazoo client started")
         return zk
+
+    def watch_znode(self, path: str):
+        # print(f"{path} is being watched")
+        print("-------------")
+        print("Current state of tree")
+        self.print_tree("/a")
+        def watch_children(children):
+            for child in children:
+                # print(f"attaching listener to {child}")
+                self.watch_znode(f"{path}/{child}")
+        self.zk.ChildrenWatch(path, watch_children)
 
     def watch_znode_presence(
         self, root_path: str, znode_name: str, on_success: Callable, on_fail: Callable
