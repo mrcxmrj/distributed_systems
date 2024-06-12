@@ -1,42 +1,51 @@
-from typing import cast
+from typing import Callable, cast
 
 from kazoo.client import KazooClient
 from kazoo.exceptions import NoNodeException
 
 
-class Node:
+class ZooKeeperLogger:
     def __init__(self) -> None:
-        pass
-
-
-class ZooKeeperApp:
-    def __init__(self):
-        self.znode_path = "/a"
         self.zk = self.init_kazoo()
-        self.print_tree(self.znode_path)
+        self.watch_znode_presence(
+            "/", "a", lambda: print("success!"), lambda: print("failure ;/")
+        )
         self.main_loop()
 
-    def main_loop(self):
+    def init_kazoo(self) -> KazooClient:
+        zk = KazooClient(hosts="127.0.0.1:2181")
+        zk.start()
+        print("kazoo client started")
+        return zk
+
+    def watch_znode_presence(
+        self, root_path: str, znode_name: str, on_success: Callable, on_fail: Callable
+    ) -> None:
+        def check_if_znode_present(children):
+            if znode_name in children:
+                on_success()
+            else:
+                on_fail()
+
+        self.zk.ChildrenWatch(root_path, check_if_znode_present)
+
+    def main_loop(self) -> None:
         while True:
             pass
 
-    def init_kazoo(self) -> KazooClient:
-        print("zookeeper started")
-        zk = KazooClient(hosts="127.0.0.1:2181")
-        zk.start()
-        print("zookeeper running")
-        return zk
-
-    def print_tree(self, path):
+    def iterate_over_children(
+        self, path: str, callback: Callable[[str, str], None]
+    ) -> None:
         try:
             children = cast(list[str], self.zk.get_children(path))
-            print("Children:")
-            print(children)
             for child in children:
-                self.print_tree(f"{path}/{child}")
+                callback(path, child)
         except NoNodeException:
-            print(f"No node {path}")
+            pass
+
+    def print_tree(self, path: str) -> None:
+        self.iterate_over_children(path, lambda path, child: print(f"{path}/{child}"))
 
 
 if __name__ == "__main__":
-    app = ZooKeeperApp()
+    app = ZooKeeperLogger()
