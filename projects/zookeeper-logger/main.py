@@ -1,75 +1,19 @@
+import curses
 from typing import Self, cast
 
 from kazoo.client import KazooClient
 from kazoo.exceptions import NoNodeException
-
-
-class TUI:
-    def render(self) -> None:
-        self.clear()
-        print("TUI")
-
-    def clear(self) -> None:
-        print("TUI stopped")
-        pass
-        # os.system('clear')
-
-
-# class ZooKeeperLogger:
-#     def __init__(self) -> None:
-#         self.zk = self.init_kazoo()
-#         self.watch_znode_presence(
-#             "/", "a", self.print_tree(), lambda: print("node deleted")
-#         )
-#         self.main_loop()
-#
-#     def init_kazoo(self) -> KazooClient:
-#         zk = KazooClient(hosts="127.0.0.1:2181")
-#         zk.start()
-#         print("kazoo client started")
-#         return zk
-#
-#     def watch_znode(self, path: str):
-#         print("-------------")
-#         print("Current state of tree")
-#
-#         def watch_children(children):
-#             for child in children:
-#                 self.watch_znode(f"{path}/{child}")
-#
-#         self.zk.ChildrenWatch(path, watch_children)
-#
-#     def watch_znode_presence(
-#         self, root_path: str, znode_name: str, on_success: Callable, on_fail: Callable
-#     ) -> None:
-#         def check_if_znode_present(children):
-#             if znode_name in children:
-#                 on_success()
-#             else:
-#                 on_fail()
-#
-#         self.zk.ChildrenWatch(root_path, check_if_znode_present)
-#
-#     def main_loop(self) -> None:
-#         while True:
-#             pass
-#
-#     def print_tree(self, path: str) -> None:
-#         try:
-#             children = cast(list[str], self.zk.get_children(path))
-#             for child in children:
-#                 self.print_tree(f"{path}/{child}")
-#         except NoNodeException:
-#             pass
-#
-
 
 ROOT_PATH = "/a"
 
 
 class KazooNode:
     def __init__(
-        self, zk: KazooClient, path: str = ROOT_PATH, parent: Self | None = None
+        self,
+        zk: KazooClient,
+        path: str = ROOT_PATH,
+        parent: Self | None = None,
+        scr=None,
     ) -> None:
         self.zk = zk
         self.path = path
@@ -78,13 +22,7 @@ class KazooNode:
         self.create_children()
         self.first_call = True
         self.zk.ChildrenWatch(path, self.watcher_wrapper)
-
-    def __str__(self, level=0):
-        indent_string = "│" * level
-        result = f"{indent_string}{self.path}\n"
-        for child in self.children:
-            result += child.__str__(level + 1)
-        return result
+        self.scr = scr
 
     def create_children(self) -> None:
         try:
@@ -104,14 +42,8 @@ class KazooNode:
 
     def on_child_change(self):
         if self.parent is None:
-            # print(f"[{self.path}]: My parent is {self.parent}")
-            # print(
-            #     f"[{self.path}]: These are my children: {[child.path for child in self.children]}"
-            # )
-            print(self.count_children())
-            print(self)
+            self.render_tui()
         else:
-            # print(f"[{self.path}]: I'm calling {self.parent}!")
             self.parent.on_child_change()
 
     def update_children(self, children_names: list[str]):
@@ -126,7 +58,6 @@ class KazooNode:
             else:
                 children_path_set.remove(child.path)
         for new_child_path in children_path_set:
-            # print(new_child_path)
             child_node = KazooNode(self.zk, new_child_path, self)
             self.children.append(child_node)
 
@@ -139,28 +70,36 @@ class KazooNode:
             children_count += child.count_children()
         return children_count
 
+    def render_tui(self):
+        if self.scr is None:
+            return
+        self.scr.clear()
 
-def launch_gui_if_znode_present(children):
-    if ROOT_PATH in children:
-        root_node = KazooNode(zk, ROOT_PATH)
+        self.scr.addstr(f"Current children number: {self.count_children()}")
+        node_strings = self.stringify_nodes()
+        for y, node_string in enumerate(node_strings):
+            self.scr.addstr(y + 1, 0, node_string)
+        self.scr.refresh()
 
-
-def print_tree(self, path: str) -> None:
-    if path != ROOT_PATH:
-        return
-    try:
-        children = cast(list[str], self.zk.get_children(path))
-        for child in children:
-            self.print_tree(f"{path}/{child}")
-    except NoNodeException:
-        pass
+    def stringify_nodes(self, level=0) -> list[str]:
+        indent_string = "│" * level
+        result = [f"{indent_string}{self.path}\n"]
+        for child in self.children:
+            result = [*result, *child.stringify_nodes(level + 1)]
+        return result
 
 
 if __name__ == "__main__":
     zk = KazooClient(hosts="127.0.0.1:2181")
     zk.start()
-    # zk.ChildrenWatch(ROOT_PATH, launch_gui_if_znode_present())
-    root_node = KazooNode(zk)
-    print(root_node.count_children())
+
+    def launch_gui_if_znode_present(children):
+        print(children)
+        if ROOT_PATH[1:] in children:
+            curses.wrapper(lambda scr: KazooNode(zk, scr=scr))
+        else:
+            print("close tui")
+
+    zk.ChildrenWatch("/", launch_gui_if_znode_present)
     while True:
         pass
