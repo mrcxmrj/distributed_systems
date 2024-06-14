@@ -23,6 +23,7 @@ class KazooNode:
         self.first_call = True
         self.zk.ChildrenWatch(path, self.watcher_wrapper)
         self.scr = scr
+        self.render_tui()  # is this necessary?
 
     def create_children(self) -> None:
         try:
@@ -31,7 +32,7 @@ class KazooNode:
                 child_node = KazooNode(self.zk, f"{self.path}/{child}", self)
                 self.children.append(child_node)
         except NoNodeException:
-            print(f"ERROR: There is no zookeeper node {self.path}")
+            pass
 
     def watcher_wrapper(self, children_paths: list[str]):
         if self.first_call:
@@ -93,13 +94,18 @@ if __name__ == "__main__":
     zk = KazooClient(hosts="127.0.0.1:2181")
     zk.start()
 
-    def launch_gui_if_znode_present(children):
-        print(children)
-        if ROOT_PATH[1:] in children:
-            curses.wrapper(lambda scr: KazooNode(zk, scr=scr))
-        else:
-            print("close tui")
+    # FIXME: idk why the ui doesn't render for empty /a
+    # just when I add some children iddkkdkdk
+    def handle_root_children_change(children):
+        def launch_gui_if_znode_present(scr):
+            if ROOT_PATH[1:] in children:
+                KazooNode(zk, scr=scr)
+            else:
+                scr.clear()
+                scr.refresh()
 
-    zk.ChildrenWatch("/", launch_gui_if_znode_present)
+        curses.wrapper(launch_gui_if_znode_present)
+
+    zk.ChildrenWatch("/", handle_root_children_change)
     while True:
         pass
