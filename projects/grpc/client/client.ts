@@ -38,7 +38,7 @@ function main() {
       handleCall(call);
     });
   } catch (error) {
-    console.error(`Error creating gRPC client: ${error.message}`);
+    console.error(`Error creating gRPC client: ${error}`);
     process.exit(1);
   }
 }
