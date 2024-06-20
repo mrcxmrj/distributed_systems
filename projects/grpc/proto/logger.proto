@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package logger;
+
+service Logger {
+  rpc Subscribe(SubscriptionRequest) returns (stream NewLog);
+}
+
+message SubscriptionRequest {
+  string source = 1;
+  // severity?
+}
+
+message NewLog {
+  string source = 1;
+  Severity severity = 2;
+  // timestamp?
+  repeated string messages = 3;
+}
+
+enum Severity {
+  INFO = 0;
+  WARNING = 1;
+  ERROR = 2;
+  CRITICAL = 3;
+}
